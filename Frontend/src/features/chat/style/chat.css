@@ -1,0 +1,111 @@
+.chat-dashboard-wrapper {
+  display: flex;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  font-family: 'Inter', sans-serif;
+  padding: 40px 20px;
+  gap: 20px;
+}
+
+.chat-input-section,
+.chat-output-section {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  padding: 30px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-title {
+  color: #333;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 25px;
+  margin-top: 0;
+}
+
+.chat-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.chat-label {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.chat-input,
+.chat-select,
+.chat-textarea {
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background-color: #ffffff;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.3s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-textarea {
+  resize: vertical;
+  min-height: 150px;
+}
+
+.chat-input:focus,
+.chat-select:focus,
+.chat-textarea:focus {
+  border-color: #3b82f6;
+}
+
+.chat-submit-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.chat-submit-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.chat-submit-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.chat-stream-box {
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.chat-error {
+  background-color: #fee2e2;
+  color: #991b1b;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #fecaca;
+}

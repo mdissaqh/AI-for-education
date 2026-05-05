@@ -6,30 +6,37 @@ import Dashboard from "./features/chat/pages/Dashboard";
 import AdminLogin from "./features/admin/pages/AdminLogin";
 import AdminDashboard from "./features/admin/pages/AdminDashboard";
 import AdminProtected from "./features/admin/components/AdminProtected";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export const router = createBrowserRouter([
     {
-        path: "/login",
-        element: <Login />
-    },
-    {
-        path: "/login/success",
-        element: <Login />
-    },
-    {
-        path: "/register",
-        element: <Register />
-    },
-    {
-        path: "/admin/login",
-        element: <AdminLogin />
-    },
-    {
-        path: "/admin/dashboard",
-        element: <AdminProtected><AdminDashboard /></AdminProtected>
-    },
-    {
         path: "/",
-        element: <Protected><Dashboard/></Protected>
+        errorElement: <ErrorBoundary />,
+        children: [
+            {
+                path: "/login",
+                element: <Login />
+            },
+            {
+                path: "/login/success",
+                element: <Login />
+            },
+            {
+                path: "/register",
+                element: <Register />
+            },
+            {
+                path: "/admin/login",
+                element: <AdminLogin />
+            },
+            {
+                path: "/admin/dashboard",
+                element: <AdminProtected><AdminDashboard /></AdminProtected>
+            },
+            {
+                index: true,
+                element: <Protected><Dashboard/></Protected>
+            }
+        ]
     }
 ]);

@@ -1,15 +1,16 @@
 require('dotenv').config();
+const http = require('http');
+const { Server } = require('socket.io');
 const app = require('./src/app');
-const seedAdmin = require('./src/config/seedAdmin');
+const setupSocket = require('./src/config/socket');
 
 const PORT = process.env.PORT || 3000;
+const server = http.createServer(app);
 
-const startServer = async () => {
-  await seedAdmin();
-  
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-};
+const io = new Server(server);
 
-startServer();
+setupSocket(io);
+
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
