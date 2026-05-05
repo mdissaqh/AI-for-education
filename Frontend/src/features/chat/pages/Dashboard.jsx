@@ -1,21 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { MessageCircle, X, Send } from 'lucide-react';
 import { useChat } from '../hook/useChat';
 import '../style/chat.css';
 
 const Dashboard = () => {
-  const { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult } = useChat();
+  const { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage } = useChat();
   
-  const [formData, setFormData] = useState({
-    schemeNo: '',
-    department: '',
-    semester: '',
-    subjectId: '',
-    totalMarks: 45
-  });
-
-  const [parsedQuestions, setParsedQuestions] = useState([]);
+  const [formData, setFormData] = useState({ schemeNo: '', department: '', semester: '', subjectId: '', totalMarks: 45 });
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const chatEndRef = useRef(null);
 
   useEffect(() => {
     if (formData.schemeNo && formData.department && formData.semester) {
@@ -24,26 +20,24 @@ const Dashboard = () => {
   }, [formData.schemeNo, formData.department, formData.semester]);
 
   useEffect(() => {
-    if (isMockTestMode && !isGenerating && generatedQuestion && !evaluationResult) {
-      const parts = generatedQuestion.split(/(?=### Question)/);
-      const formatted = parts.map((part, idx) => ({ id: idx, text: part.trim() })).filter(p => p.text);
-      setParsedQuestions(formatted);
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [isMockTestMode, isGenerating, generatedQuestion, evaluationResult]);
+  }, [chatMessages]);
 
-  const handleInputChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    generatePyqQuestion(formData.subjectId, formData.totalMarks);
-  };
-
-  const onAutoExpand = (e, id) => {
+  const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleSubmit = (e) => { e.preventDefault(); generatePyqQuestion(formData.subjectId, formData.totalMarks); };
+  
+  const onAutoExpand = (e) => {
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
-    handleAnswerChange(id, e.target.value);
+    handleAnswerChange(e.target.value);
+  };
+
+  const handleChatSubmit = (e) => {
+    e.preventDefault();
+    sendChatMessage(formData.subjectId, chatInput);
+    setChatInput('');
   };
 
   return (
@@ -93,10 +87,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 && (
+        {isMockTestMode && !isGenerating && !evaluationResult && generatedQuestion && (
           <div className="test-controls-top">
             <div className="timer-display">Time Remaining: <span>{formatTime()}</span></div>
-            <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId, parsedQuestions)} disabled={isEvaluating}>
+            <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId)} disabled={isEvaluating}>
               {isEvaluating ? 'Evaluating...' : 'Submit Test for Evaluation'}
             </button>
           </div>
@@ -104,28 +98,59 @@ const Dashboard = () => {
 
         {statusMessage && <div className="chat-status-msg">🔄 {statusMessage}</div>}
 
-        {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 ? (
-          <div className="mock-test-container">
-            {parsedQuestions.map((q) => (
-              <div key={q.id} className="mock-question-block">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.text}</ReactMarkdown>
-                <textarea 
-                  className="auto-expand-textarea" 
-                  value={studentAnswers[q.id] || ''} 
-                  onChange={(e) => onAutoExpand(e, q.id)} 
-                  placeholder="Type your answer here..."
-                />
-              </div>
-            ))}
+        <div className="chat-stream-box">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {generatedQuestion || "### Select a subject and generate a paper."}
+          </ReactMarkdown>
+        </div>
+
+        {isMockTestMode && !isGenerating && !evaluationResult && generatedQuestion && (
+          <div className="answer-sheet-container">
+            <h3 className="answer-sheet-title">Your Answer Sheet</h3>
+            <textarea 
+              className="auto-expand-textarea" 
+              value={studentAnswers} 
+              onChange={onAutoExpand} 
+              placeholder="1. Type all your answers here corresponding to the questions above..."
+            />
           </div>
-        ) : (
-          <div className="chat-stream-box">
+        )}
+
+        {evaluationResult && (
+          <div className="evaluation-box">
+            <h3 className="evaluation-title">Evaluation Results</h3>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {evaluationResult || generatedQuestion || "### Select a subject and generate a paper."}
+              {evaluationResult}
             </ReactMarkdown>
           </div>
         )}
       </div>
+
+      <button className="floating-chat-btn" onClick={() => setIsChatOpen(!isChatOpen)}>
+        {isChatOpen ? <X size={24} /> : <MessageCircle size={24} />}
+      </button>
+
+      {isChatOpen && (
+        <div className="floating-chat-window">
+          <div className="chat-window-header">
+            <h3>AI Tutor</h3>
+            <button onClick={() => setIsChatOpen(false)}><X size={18} /></button>
+          </div>
+          <div className="chat-window-body">
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`chat-bubble ${msg.role}`}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              </div>
+            ))}
+            {isChatLoading && <div className="chat-bubble ai typing">Typing...</div>}
+            <div ref={chatEndRef} />
+          </div>
+          <form className="chat-window-input" onSubmit={handleChatSubmit}>
+            <input type="text" value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Ask a doubt..." disabled={isChatLoading} />
+            <button type="submit" disabled={!chatInput.trim() || isChatLoading}><Send size={18} /></button>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

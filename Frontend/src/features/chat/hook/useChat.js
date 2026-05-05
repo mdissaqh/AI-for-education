@@ -3,24 +3,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { io } from 'socket.io-client';
 import chatService from '../service/chatService';
 import { 
-  startGeneration, 
-  updateStatus,
-  receiveChunk, 
-  generationComplete, 
-  generationError,
-  setSubjects,
-  updateTimer,
-  setStudentAnswer,
-  startEvaluation,
-  receiveEvaluationChunk,
-  evaluationComplete
+  startGeneration, updateStatus, receiveChunk, generationComplete, 
+  generationError, setSubjects, updateTimer, setStudentAnswers, 
+  startEvaluation, receiveEvaluationChunk, evaluationComplete, 
+  addUserMessage, receiveChatChunk, chatComplete 
 } from '../state/chatSlice';
 
 export const useChat = () => {
   const dispatch = useDispatch();
   const socketRef = useRef(null);
   
-  const { generatedQuestion, isGenerating, statusMessage, error, subjects, isMockTestMode, timer, studentAnswers, isEvaluating, evaluationResult } = useSelector((state) => state.chat);
+  const { generatedQuestion, isGenerating, statusMessage, error, subjects, isMockTestMode, timer, studentAnswers, isEvaluating, evaluationResult, chatMessages, isChatLoading } = useSelector((state) => state.chat);
 
   useEffect(() => {
     socketRef.current = io();
@@ -34,6 +27,10 @@ export const useChat = () => {
     socketRef.current.on('evaluation_chunk', (chunk) => dispatch(receiveEvaluationChunk(chunk)));
     socketRef.current.on('evaluation_complete', () => dispatch(evaluationComplete()));
     socketRef.current.on('evaluation_error', (err) => dispatch(generationError(err)));
+
+    socketRef.current.on('chat_chunk', (chunk) => dispatch(receiveChatChunk(chunk)));
+    socketRef.current.on('chat_complete', () => dispatch(chatComplete()));
+    socketRef.current.on('chat_error', (err) => dispatch(generationError(err)));
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
@@ -70,25 +67,24 @@ export const useChat = () => {
   };
 
   const triggerMockTest = (subjectId) => {
-    if (!subjectId) {
-      dispatch(generationError('Please select a subject first.'));
-      return;
-    }
+    if (!subjectId) return dispatch(generationError('Please select a subject first.'));
     dispatch(startGeneration(true));
     socketRef.current.emit('generate_question', { subjectId, totalMarks: 100, isMockTest: true });
   };
 
-  const handleAnswerChange = (id, text) => {
-    dispatch(setStudentAnswer({ id, text }));
+  const handleAnswerChange = (text) => {
+    dispatch(setStudentAnswers(text));
   };
 
-  const submitTest = (subjectId, parsedQuestions) => {
-    const compiledAnswers = parsedQuestions.map(q => 
-      `Question: ${q.text}\nStudent Answer: ${studentAnswers[q.id] || "No answer provided."}`
-    ).join("\n\n---\n\n");
-
+  const submitTest = (subjectId) => {
     dispatch(startEvaluation());
-    socketRef.current.emit('evaluate_test', { subjectId, compiledAnswers });
+    socketRef.current.emit('evaluate_test', { subjectId, compiledAnswers: studentAnswers });
+  };
+
+  const sendChatMessage = (subjectId, message) => {
+    if (!message.trim()) return;
+    dispatch(addUserMessage(message));
+    socketRef.current.emit('general_chat', { subjectId, message });
   };
 
   const formatTime = () => {
@@ -98,5 +94,5 @@ export const useChat = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult };
+  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage };
 };

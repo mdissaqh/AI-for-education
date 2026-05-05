@@ -1,4 +1,4 @@
-const { ChatMistralAI } = require("@langchain/mistralai");
+const { ChatGoogleGenerativeAI } = require("@langchain/google-genai");
 const { HumanMessage } = require("@langchain/core/messages");
 const Material = require('../models/Material');
 const axios = require('axios');
@@ -59,13 +59,13 @@ const generateQuestion = async (socket, data) => {
     if (!isMockTest && (totalMarks < 45 || totalMarks > 90)) {
       throw new Error("Total marks must be between 45 and 90.");
     }
-    if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
+    if (!process.env.GOOGLE_API_KEY) throw new Error("Google API key missing.");
 
     socket.emit('question_status', 'Analyzing study materials...');
 
-    const aiModel = new ChatMistralAI({
-      model: "mistral-small-latest",
-      apiKey: process.env.MISTRAL_API_KEY,
+    const aiModel = new ChatGoogleGenerativeAI({
+      model: "gemini-3.1-flash-lite-preview",
+      apiKey: process.env.GOOGLE_API_KEY,
       streaming: true
     });
 
@@ -134,13 +134,13 @@ const evaluateTest = async (socket, data) => {
   try {
     const { subjectId, compiledAnswers } = data;
 
-    if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
+    if (!process.env.GOOGLE_API_KEY) throw new Error("Google API key missing.");
 
     socket.emit('evaluation_status', 'Evaluating your answers against the official notes...');
 
-    const aiModel = new ChatMistralAI({
-      model: "mistral-small-latest",
-      apiKey: process.env.MISTRAL_API_KEY,
+    const aiModel = new ChatGoogleGenerativeAI({
+      model: "gemini-3.1-flash-lite-preview",
+      apiKey: process.env.GOOGLE_API_KEY,
       streaming: true
     });
 
@@ -163,8 +163,9 @@ const evaluateTest = async (socket, data) => {
     CONSTRAINTS:
     1. Evaluate strictly based on the OFFICIAL NOTES.
     2. Provide constructive feedback and assign marks obtained out of the total marks for each question.
-    3. Provide the FINAL TOTAL SCORE out of 100 at the top of your response.
-    4. Use Markdown formatting.`;
+    3. Output a strict Score Summary Table mapping each question to marks awarded.
+    4. Provide the FINAL TOTAL SCORE out of 100 ONLY at the VERY END of your response after performing math. DO NOT place it at the top.
+    5. Use Markdown formatting.`;
 
     const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
 
@@ -178,4 +179,43 @@ const evaluateTest = async (socket, data) => {
   }
 };
 
-module.exports = { generateQuestion, evaluateTest };
+const generalChat = async (socket, data) => {
+  try {
+    const { message, subjectId } = data;
+    if (!process.env.GOOGLE_API_KEY) throw new Error("Google API key missing.");
+
+    const aiModel = new ChatGoogleGenerativeAI({
+      model: "gemini-3.1-flash-lite-preview",
+      apiKey: process.env.GOOGLE_API_KEY,
+      streaming: true
+    });
+
+    let notesData = "";
+    if (subjectId) {
+      const materials = await Material.find({ subject: subjectId, category: 'Notes' });
+      for (let i = 0; i < materials.length; i++) {
+        notesData += await extractTextFromPDF(materials[i].pdfUrl, socket) + "\n";
+      }
+    }
+
+    const prompt = `You are a friendly, helpful university tutor. Answer the student's question clearly.
+    
+    STUDENT MESSAGE: ${message}
+    
+    ${notesData ? `SYLLABUS CONTEXT:\n${notesData}\n\nConstraint: Use the syllabus context to answer the question accurately if it relates to the subject.` : ''}
+    
+    Format your response in clean Markdown.`;
+
+    const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
+
+    for await (const chunk of stream) {
+      socket.emit('chat_chunk', chunk.content);
+    }
+
+    socket.emit('chat_complete');
+  } catch (error) {
+    socket.emit('chat_error', error.message);
+  }
+};
+
+module.exports = { generateQuestion, evaluateTest, generalChat };
