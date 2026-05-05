@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useChat } from '../hook/useChat';
 import '../style/chat.css';
 
@@ -57,16 +59,7 @@ const Dashboard = () => {
           </div>
           <div className="chat-form-group">
             <label className="chat-label">Total Marks (45 - 90)</label>
-            <input 
-              type="number" 
-              name="totalMarks" 
-              className="chat-input" 
-              value={formData.totalMarks} 
-              onChange={handleInputChange} 
-              min="45" 
-              max="90" 
-              required 
-            />
+            <input type="number" name="totalMarks" className="chat-input" value={formData.totalMarks} onChange={handleInputChange} min="45" max="90" required />
           </div>
           <button type="submit" className="chat-submit-btn" disabled={isGenerating}>
             {isGenerating ? 'Processing...' : 'Generate Paper'}
@@ -76,7 +69,11 @@ const Dashboard = () => {
       <div className="chat-output-section">
         <h2 className="chat-title">Question Paper</h2>
         {statusMessage && <div className="chat-status">🔄 {statusMessage}</div>}
-        <div className="chat-stream-box">{generatedQuestion || "Fill the form to generate a paper."}</div>
+        <div className="chat-markdown-content">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {generatedQuestion || "### Fill the form to generate a paper."}
+          </ReactMarkdown>
+        </div>
       </div>
     </div>
   );
