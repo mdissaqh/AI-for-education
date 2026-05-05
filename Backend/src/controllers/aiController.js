@@ -69,28 +69,36 @@ const generateQuestion = async (socket, data) => {
     const pyqUrls = materials.filter(m => m.category === 'PYQs').map(m => m.pdfUrl);
     const notesUrls = materials.filter(m => m.category === 'Notes').map(m => m.pdfUrl);
 
-    let contextData = "";
+    let pyqsData = "";
     for (let i = 0; i < pyqUrls.length; i++) {
-      contextData += await extractTextFromPDF(pyqUrls[i], socket) + "\n";
+      pyqsData += await extractTextFromPDF(pyqUrls[i], socket) + "\n";
     }
+
+    let notesData = "";
     for (let i = 0; i < notesUrls.length; i++) {
-      contextData += await extractTextFromPDF(notesUrls[i], socket) + "\n";
+      notesData += await extractTextFromPDF(notesUrls[i], socket) + "\n";
     }
 
-    if (!contextData.trim()) throw new Error("Could not extract readable text.");
+    if (!pyqsData.trim() && !notesData.trim()) throw new Error("Could not extract readable text.");
 
-    socket.emit('question_status', `Generating a ${totalMarks} marks paper...`);
+    socket.emit('question_status', `Generating a ${totalMarks} marks paper with answers...`);
 
-    const prompt = `You are a university professor. Generate a question paper based ONLY on the context provided.
+    const prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
     
     CONSTRAINTS:
     1. The total sum of marks for all questions MUST be exactly ${totalMarks}.
     2. Use 2-mark, 5-mark, and 10-mark questions.
     3. State the marks for each question.
-    4. Provide a total marks summary at the end.
+    4. Immediately after each question, provide the ANSWER.
+    5. Answers MUST be derived STRICTLY from the NOTES provided below. Do not invent information.
+    6. Provide a total marks summary at the end.
+    7. Use Markdown formatting (## for headers, **bold** for emphasis).
     
-    CONTEXT:
-    ${contextData}`;
+    PYQS (Use to understand question patterns):
+    ${pyqsData}
+    
+    NOTES (Use STRICTLY to extract answers):
+    ${notesData}`;
 
     const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
 
