@@ -36,10 +36,15 @@ const extractTextFromPDF = async (pdfUrl, socket) => {
       pdfParser.parseBuffer(buffer);
     });
 
-    const cleanedText = extractedText.replace(/\r\n/g, ' ').replace(/\s+/g, ' ').trim();
+    let cleanedText = extractedText.replace(/----------------Page \((\d+)\) Break----------------/g, (match, p1) => {
+      return `\n\n[PAGE ${parseInt(p1) + 1}]\n\n`;
+    });
+
+    cleanedText = cleanedText.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    
     if (cleanedText.length < 50) return "";
     
-    return cleanedText.substring(0, 12000); 
+    return `\n--- SOURCE DOCUMENT URL: ${pdfUrl} ---\n${cleanedText.substring(0, 20000)}`; 
   } catch (error) {
     return ""; 
   }
@@ -55,7 +60,7 @@ const generateQuestion = async (socket, data) => {
     }
     if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
 
-    socket.emit('question_status', 'Analyzing study materials...');
+    socket.emit('question_status', 'Analyzing study materials and mapping page numbers...');
 
     const aiModel = new ChatMistralAI({
       model: "mistral-small-latest",
@@ -81,7 +86,7 @@ const generateQuestion = async (socket, data) => {
 
     if (!pyqsData.trim() && !notesData.trim()) throw new Error("Could not extract readable text.");
 
-    socket.emit('question_status', `Generating a ${totalMarks} marks paper with answers...`);
+    socket.emit('question_status', `Generating a ${totalMarks} marks paper with answers and citations...`);
 
     const prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
     
@@ -91,13 +96,14 @@ const generateQuestion = async (socket, data) => {
     3. State the marks for each question.
     4. Immediately after each question, provide the ANSWER.
     5. Answers MUST be derived STRICTLY from the NOTES provided below. Do not invent information.
-    6. Provide a total marks summary at the end.
-    7. Use Markdown formatting (## for headers, **bold** for emphasis).
+    6. MANDATORY: At the end of EVERY answer, provide a reference citation with the exact Page Number and a clickable Source Document URL. Format exactly like this: **Reference:** Page X - [View Source Document](URL). Identify the page number from the [PAGE X] tags in the text. Use the SOURCE DOCUMENT URL provided at the start of the notes.
+    7. Provide a total marks summary at the end.
+    8. Use Markdown formatting (## for headers, **bold** for emphasis).
     
     PYQS (Use to understand question patterns):
     ${pyqsData}
     
-    NOTES (Use STRICTLY to extract answers):
+    NOTES (Use STRICTLY to extract answers and page citations):
     ${notesData}`;
 
     const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);

@@ -67,11 +67,11 @@ const Dashboard = () => {
         </form>
       </div>
       <div className="chat-output-section">
-        <h2 className="chat-title">Question Paper</h2>
-        {statusMessage && <div className="chat-status">🔄 {statusMessage}</div>}
-        <div className="chat-markdown-content">
+        <h2 className="chat-title">Question Paper & Solutions</h2>
+        {statusMessage && <div className="chat-status-msg">🔄 {statusMessage}</div>}
+        <div className="chat-stream-box">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {generatedQuestion || "### Fill the form to generate a paper."}
+            {generatedQuestion || "### Fill the form to generate a paper with reference links."}
           </ReactMarkdown>
         </div>
       </div>

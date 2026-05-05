@@ -15,7 +15,6 @@ export const useChat = () => {
   const dispatch = useDispatch();
   const socketRef = useRef(null);
   
-  
   const { generatedQuestion, isGenerating, statusMessage, error, subjects } = useSelector((state) => state.chat);
 
   useEffect(() => {
