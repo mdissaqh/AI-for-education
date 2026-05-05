@@ -66,7 +66,7 @@ const AdminDashboard = () => {
           </button>
         </div>
 
-        {success && <div className="status-message status-success">Material securely uploaded to AWS S3!</div>}
+        {success && <div className="status-message status-success">Material securely uploaded and mapped to Subject!</div>}
         {error && <div className="status-message status-error">{error}</div>}
 
         <form className="upload-form-grid" onSubmit={onSubmit}>
@@ -140,7 +140,7 @@ const AdminDashboard = () => {
               className="admin-auth-input"
               value={formData.subject}
               onChange={handleInputChange}
-              placeholder="e.g., Database Management Systems (DBMS)"
+              placeholder="e.g., Database Management Systems"
               required
             />
             <datalist id="subject-suggestions">

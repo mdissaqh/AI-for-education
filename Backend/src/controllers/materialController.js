@@ -12,6 +12,22 @@ const uploadMaterial = async (req, res) => {
 
     const { title, subject, category, schemeNo, department, semester } = req.body;
 
+    let subjectDoc = await Subject.findOne({ 
+      name: subject, 
+      semester, 
+      department, 
+      schemeNo 
+    });
+
+    if (!subjectDoc) {
+      subjectDoc = await Subject.create({
+        name: subject,
+        semester,
+        department,
+        schemeNo
+      });
+    }
+
     const fileExtension = req.file.originalname.split('.').pop();
     const uniqueFileName = `${crypto.randomBytes(16).toString('hex')}.${fileExtension}`;
 
@@ -28,23 +44,13 @@ const uploadMaterial = async (req, res) => {
 
     const material = await Material.create({
       title,
-      subject,
+      subject: subjectDoc._id,
       category,
       schemeNo,
       department,
       semester,
       pdfUrl
     });
-
-    const existingSubject = await Subject.findOne({ name: subject, semester, department, schemeNo });
-    if (!existingSubject) {
-      await Subject.create({
-        name: subject,
-        semester,
-        department,
-        schemeNo
-      });
-    }
 
     res.status(201).json(material);
   } catch (error) {
