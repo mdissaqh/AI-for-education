@@ -22,7 +22,6 @@ export const useMaterialUpload = () => {
 
   const loadSubjects = async (semester, department, schemeNo) => {
     try {
-      if (!semester || !department || !schemeNo) return;
       const subjects = await materialService.fetchSubjects(semester, department, schemeNo);
       dispatch(setAvailableSubjects(subjects));
     } catch (err) {

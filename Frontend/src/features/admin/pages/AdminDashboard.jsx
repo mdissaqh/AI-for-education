@@ -20,10 +20,8 @@ const AdminDashboard = () => {
   const [file, setFile] = useState(null);
 
   useEffect(() => {
-    if (formData.semester && formData.department && formData.schemeNo) {
-      loadSubjects(formData.semester, formData.department, formData.schemeNo);
-    }
-  }, [formData.semester, formData.department, formData.schemeNo]);
+    loadSubjects();
+  }, []);
 
   const handleInputChange = (e) => {
     setFormData({
