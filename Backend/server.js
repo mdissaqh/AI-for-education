@@ -3,7 +3,7 @@ const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
 const app = require('./src/app');
-const { generateQuestion } = require('./src/controllers/aiController');
+const { generateQuestion, evaluateTest } = require('./src/controllers/aiController');
 
 const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
@@ -16,6 +16,10 @@ mongoose.connect(process.env.MONGO_URI)
 io.on('connection', (socket) => {
   socket.on('generate_question', (data) => {
     generateQuestion(socket, data);
+  });
+  
+  socket.on('evaluate_test', (data) => {
+    evaluateTest(socket, data);
   });
 });
 

@@ -52,15 +52,16 @@ const extractTextFromPDF = async (pdfUrl, socket) => {
 
 const generateQuestion = async (socket, data) => {
   try {
-    const { subjectId, totalMarks } = data;
+    const { subjectId, totalMarks, isMockTest } = data;
+    const targetMarks = isMockTest ? 100 : totalMarks;
 
     if (!subjectId) throw new Error("Subject ID is missing.");
-    if (totalMarks < 45 || totalMarks > 90) {
+    if (!isMockTest && (totalMarks < 45 || totalMarks > 90)) {
       throw new Error("Total marks must be between 45 and 90.");
     }
     if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
 
-    socket.emit('question_status', 'Analyzing study materials and mapping page numbers...');
+    socket.emit('question_status', 'Analyzing study materials...');
 
     const aiModel = new ChatMistralAI({
       model: "mistral-small-latest",
@@ -86,25 +87,41 @@ const generateQuestion = async (socket, data) => {
 
     if (!pyqsData.trim() && !notesData.trim()) throw new Error("Could not extract readable text.");
 
-    socket.emit('question_status', `Generating a ${totalMarks} marks paper with answers and citations...`);
-
-    const prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
+    let prompt = "";
     
-    CONSTRAINTS:
-    1. The total sum of marks for all questions MUST be exactly ${totalMarks}.
-    2. Use 2-mark, 5-mark, and 10-mark questions.
-    3. State the marks for each question.
-    4. Immediately after each question, provide the ANSWER.
-    5. Answers MUST be derived STRICTLY from the NOTES provided below. Do not invent information.
-    6. MANDATORY: At the end of EVERY answer, provide a reference citation with the exact Page Number and a clickable Source Document URL. Format exactly like this: **Reference:** Page X - [View Source Document](URL). Identify the page number from the [PAGE X] tags in the text. Use the SOURCE DOCUMENT URL provided at the start of the notes.
-    7. Provide a total marks summary at the end.
-    8. Use Markdown formatting (## for headers, **bold** for emphasis).
-    
-    PYQS (Use to understand question patterns):
-    ${pyqsData}
-    
-    NOTES (Use STRICTLY to extract answers and page citations):
-    ${notesData}`;
+    if (isMockTest) {
+      socket.emit('question_status', `Generating 100 marks Mock Test based on PYQs...`);
+      prompt = `You are a university professor. Generate a mock test question paper based ONLY on the PYQs context provided.
+      
+      CONSTRAINTS:
+      1. The total sum of marks for all questions MUST be exactly 100.
+      2. Provide ONLY the questions. DO NOT provide any answers.
+      3. State the marks for each question.
+      4. Provide a total marks summary at the end.
+      5. Use Markdown formatting.
+      
+      PYQS:
+      ${pyqsData}`;
+    } else {
+      socket.emit('question_status', `Generating a ${targetMarks} marks paper with answers and citations...`);
+      prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
+      
+      CONSTRAINTS:
+      1. The total sum of marks for all questions MUST be exactly ${targetMarks}.
+      2. Use 2-mark, 5-mark, and 10-mark questions.
+      3. State the marks for each question.
+      4. Immediately after each question, provide the ANSWER.
+      5. Answers MUST be derived STRICTLY from the NOTES provided below.
+      6. MANDATORY: At the end of EVERY answer, provide a reference citation. Format exactly like this: **Reference:** Page X - [View Source Document](URL). Identify the page number from the [PAGE X] tags. Use the SOURCE DOCUMENT URL provided at the start of the notes.
+      7. Provide a total marks summary at the end.
+      8. Use Markdown formatting.
+      
+      PYQS:
+      ${pyqsData}
+      
+      NOTES:
+      ${notesData}`;
+    }
 
     const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
 
@@ -118,4 +135,56 @@ const generateQuestion = async (socket, data) => {
   }
 };
 
-module.exports = { generateQuestion };
+const evaluateTest = async (socket, data) => {
+  try {
+    const { subjectId, studentAnswers, questionPaper } = data;
+
+    if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
+
+    socket.emit('evaluation_status', 'Evaluating your answers against the official notes...');
+
+    const aiModel = new ChatMistralAI({
+      model: "mistral-small-latest",
+      apiKey: process.env.MISTRAL_API_KEY,
+      streaming: true
+    });
+
+    const materials = await Material.find({ subject: subjectId });
+    const notesUrls = materials.filter(m => m.category === 'Notes').map(m => m.pdfUrl);
+
+    let notesData = "";
+    for (let i = 0; i < notesUrls.length; i++) {
+      notesData += await extractTextFromPDF(notesUrls[i], socket) + "\n";
+    }
+
+    const prompt = `You are a strict university examiner evaluating a student's mock test.
+    
+    QUESTION PAPER:
+    ${questionPaper}
+    
+    STUDENT'S ANSWERS:
+    ${studentAnswers}
+    
+    OFFICIAL NOTES FOR VERIFICATION:
+    ${notesData}
+    
+    CONSTRAINTS:
+    1. Evaluate the student's answers strictly based on the OFFICIAL NOTES.
+    2. Provide constructive feedback for each answered question.
+    3. Assign marks obtained out of the total marks for each question.
+    4. At the very end, provide the FINAL TOTAL SCORE out of 100.
+    5. Use Markdown formatting.`;
+
+    const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
+
+    for await (const chunk of stream) {
+      socket.emit('evaluation_chunk', chunk.content);
+    }
+
+    socket.emit('evaluation_complete');
+  } catch (error) {
+    socket.emit('evaluation_error', error.message);
+  }
+};
+
+module.exports = { generateQuestion, evaluateTest };

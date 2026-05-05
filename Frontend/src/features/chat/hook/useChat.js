@@ -8,14 +8,19 @@ import {
   receiveChunk, 
   generationComplete, 
   generationError,
-  setSubjects
+  setSubjects,
+  updateTimer,
+  setStudentAnswers,
+  startEvaluation,
+  receiveEvaluationChunk,
+  evaluationComplete
 } from '../state/chatSlice';
 
 export const useChat = () => {
   const dispatch = useDispatch();
   const socketRef = useRef(null);
   
-  const { generatedQuestion, isGenerating, statusMessage, error, subjects } = useSelector((state) => state.chat);
+  const { generatedQuestion, isGenerating, statusMessage, error, subjects, isMockTestMode, timer, studentAnswers, isEvaluating, evaluationResult } = useSelector((state) => state.chat);
 
   useEffect(() => {
     socketRef.current = io();
@@ -25,10 +30,25 @@ export const useChat = () => {
     socketRef.current.on('question_complete', () => dispatch(generationComplete()));
     socketRef.current.on('question_error', (err) => dispatch(generationError(err)));
 
+    socketRef.current.on('evaluation_status', (msg) => dispatch(updateStatus(msg)));
+    socketRef.current.on('evaluation_chunk', (chunk) => dispatch(receiveEvaluationChunk(chunk)));
+    socketRef.current.on('evaluation_complete', () => dispatch(evaluationComplete()));
+    socketRef.current.on('evaluation_error', (err) => dispatch(generationError(err)));
+
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
     };
   }, [dispatch]);
+
+  useEffect(() => {
+    let interval = null;
+    if (isMockTestMode && !isGenerating && timer > 0 && !isEvaluating && !evaluationResult) {
+      interval = setInterval(() => {
+        dispatch(updateTimer());
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isMockTestMode, isGenerating, timer, isEvaluating, evaluationResult, dispatch]);
 
   const loadSubjects = async (schemeNo, department, semester) => {
     try {
@@ -45,9 +65,38 @@ export const useChat = () => {
       dispatch(generationError('Marks must be between 45 and 90.'));
       return;
     }
-    dispatch(startGeneration());
-    socketRef.current.emit('generate_question', { subjectId, totalMarks: parseInt(totalMarks) });
+    dispatch(startGeneration(false));
+    socketRef.current.emit('generate_question', { subjectId, totalMarks: parseInt(totalMarks), isMockTest: false });
   };
 
-  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion };
+  const triggerMockTest = (subjectId) => {
+    if (!subjectId) {
+      dispatch(generationError('Please select a subject first.'));
+      return;
+    }
+    dispatch(startGeneration(true));
+    socketRef.current.emit('generate_question', { subjectId, totalMarks: 100, isMockTest: true });
+  };
+
+  const handleAnswerChange = (val) => {
+    dispatch(setStudentAnswers(val));
+  };
+
+  const submitTest = (subjectId) => {
+    dispatch(startEvaluation());
+    socketRef.current.emit('evaluate_test', { 
+      subjectId, 
+      studentAnswers, 
+      questionPaper: generatedQuestion 
+    });
+  };
+
+  const formatTime = () => {
+    const h = Math.floor(timer / 3600);
+    const m = Math.floor((timer % 3600) / 60);
+    const s = timer % 60;
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult };
 };
