@@ -4,6 +4,7 @@ const initialState = {
   uploading: false,
   success: false,
   error: null,
+  availableSubjects: []
 };
 
 const materialSlice = createSlice({
@@ -29,9 +30,12 @@ const materialSlice = createSlice({
       state.uploading = false;
       state.success = false;
       state.error = null;
+    },
+    setAvailableSubjects: (state, action) => {
+      state.availableSubjects = action.payload;
     }
   },
 });
 
-export const { uploadStart, uploadSuccess, uploadFailure, resetUploadState } = materialSlice.actions;
+export const { uploadStart, uploadSuccess, uploadFailure, resetUploadState, setAvailableSubjects } = materialSlice.actions;
 export default materialSlice.reducer;

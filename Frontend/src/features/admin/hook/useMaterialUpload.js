@@ -1,10 +1,10 @@
 import { useDispatch, useSelector } from 'react-redux';
 import materialService from '../service/materialService';
-import { uploadStart, uploadSuccess, uploadFailure, resetUploadState } from '../state/materialSlice';
+import { uploadStart, uploadSuccess, uploadFailure, resetUploadState, setAvailableSubjects } from '../state/materialSlice';
 
 export const useMaterialUpload = () => {
   const dispatch = useDispatch();
-  const { uploading, success, error } = useSelector((state) => state.material);
+  const { uploading, success, error, availableSubjects } = useSelector((state) => state.material);
 
   const handleUpload = async (formData) => {
     try {
@@ -20,10 +20,22 @@ export const useMaterialUpload = () => {
     }
   };
 
+  const loadSubjects = async (semester, department, schemeNo) => {
+    try {
+      if (!semester || !department || !schemeNo) return;
+      const subjects = await materialService.fetchSubjects(semester, department, schemeNo);
+      dispatch(setAvailableSubjects(subjects));
+    } catch (err) {
+      console.error('Failed to load subjects', err);
+    }
+  };
+
   return {
     uploading,
     success,
     error,
+    availableSubjects,
     handleUpload,
+    loadSubjects
   };
 };

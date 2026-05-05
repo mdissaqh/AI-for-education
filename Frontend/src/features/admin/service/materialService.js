@@ -9,8 +9,19 @@ const uploadMaterial = async (formData) => {
   return response.data;
 };
 
+const fetchSubjects = async (semester, department, schemeNo) => {
+  const params = new URLSearchParams();
+  if (semester) params.append('semester', semester);
+  if (department) params.append('department', department);
+  if (schemeNo) params.append('schemeNo', schemeNo);
+  
+  const response = await api.get(`/subjects?${params.toString()}`);
+  return response.data;
+};
+
 const materialService = {
   uploadMaterial,
+  fetchSubjects
 };
 
 export default materialService;

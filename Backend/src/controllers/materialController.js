@@ -1,15 +1,16 @@
 const { PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
 const Material = require('../models/Material');
+const Subject = require('../models/Subject');
 const s3Client = require('../config/s3');
 
 const uploadMaterial = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: 'No PDF file provided' });
+      return res.status(400).json({ error: 'No PDF file provided' });
     }
 
-    const { title, category, schemeNo, department, semester } = req.body;
+    const { title, subject, category, schemeNo, department, semester } = req.body;
 
     const fileExtension = req.file.originalname.split('.').pop();
     const uniqueFileName = `${crypto.randomBytes(16).toString('hex')}.${fileExtension}`;
@@ -27,12 +28,23 @@ const uploadMaterial = async (req, res) => {
 
     const material = await Material.create({
       title,
+      subject,
       category,
       schemeNo,
       department,
       semester,
       pdfUrl
     });
+
+    const existingSubject = await Subject.findOne({ name: subject, semester, department, schemeNo });
+    if (!existingSubject) {
+      await Subject.create({
+        name: subject,
+        semester,
+        department,
+        schemeNo
+      });
+    }
 
     res.status(201).json(material);
   } catch (error) {

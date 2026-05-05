@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminAuth } from '../hook/useAdminAuth';
 import { useMaterialUpload } from '../hook/useMaterialUpload';
 import '../style/dashboard.css';
@@ -6,10 +6,11 @@ import '../style/admin.css';
 
 const AdminDashboard = () => {
   const { handleAdminLogout } = useAdminAuth();
-  const { uploading, success, error, handleUpload } = useMaterialUpload();
+  const { uploading, success, error, availableSubjects, handleUpload, loadSubjects } = useMaterialUpload();
   
   const [formData, setFormData] = useState({
     title: '',
+    subject: '',
     category: 'Notes',
     schemeNo: '',
     department: '',
@@ -17,6 +18,12 @@ const AdminDashboard = () => {
   });
   
   const [file, setFile] = useState(null);
+
+  useEffect(() => {
+    if (formData.semester && formData.department && formData.schemeNo) {
+      loadSubjects(formData.semester, formData.department, formData.schemeNo);
+    }
+  }, [formData.semester, formData.department, formData.schemeNo]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -35,6 +42,7 @@ const AdminDashboard = () => {
 
     const data = new FormData();
     data.append('title', formData.title);
+    data.append('subject', formData.subject);
     data.append('category', formData.category);
     data.append('schemeNo', formData.schemeNo);
     data.append('department', formData.department);
@@ -43,7 +51,7 @@ const AdminDashboard = () => {
 
     handleUpload(data);
     
-    setFormData({ title: '', category: 'Notes', schemeNo: '', department: '', semester: '' });
+    setFormData({ title: '', subject: '', category: 'Notes', schemeNo: '', department: '', semester: '' });
     setFile(null);
     e.target.reset();
   };
@@ -70,7 +78,7 @@ const AdminDashboard = () => {
               className="admin-auth-input"
               value={formData.title}
               onChange={handleInputChange}
-              placeholder="e.g., Data Structures Chapter 1"
+              placeholder="e.g., Module 1 Notes"
               required
             />
           </div>
@@ -118,9 +126,28 @@ const AdminDashboard = () => {
               className="admin-auth-input"
               value={formData.semester}
               onChange={handleInputChange}
-              placeholder="e.g., 3rd"
+              placeholder="e.g., 4th"
               required
             />
+          </div>
+
+          <div className="admin-form-group full-width">
+            <label className="admin-label">Subject</label>
+            <input
+              type="text"
+              name="subject"
+              list="subject-suggestions"
+              className="admin-auth-input"
+              value={formData.subject}
+              onChange={handleInputChange}
+              placeholder="e.g., Database Management Systems (DBMS)"
+              required
+            />
+            <datalist id="subject-suggestions">
+              {availableSubjects.map((sub, index) => (
+                <option key={index} value={sub} />
+              ))}
+            </datalist>
           </div>
 
           <div className="admin-form-group full-width">

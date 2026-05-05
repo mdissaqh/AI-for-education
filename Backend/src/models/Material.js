@@ -5,6 +5,10 @@ const materialSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  subject: {
+    type: String,
+    required: true
+  },
   category: {
     type: String,
     enum: ['Notes', 'PYQs', 'Scheme'],
