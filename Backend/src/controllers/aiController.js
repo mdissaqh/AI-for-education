@@ -94,11 +94,10 @@ const generateQuestion = async (socket, data) => {
       prompt = `You are a university professor. Generate a mock test question paper based ONLY on the PYQs context provided.
       
       CONSTRAINTS:
-      1. The total sum of marks for all questions MUST be exactly 100.
-      2. Provide ONLY the questions. DO NOT provide any answers.
-      3. State the marks for each question.
-      4. Provide a total marks summary at the end.
-      5. Use Markdown formatting.
+      1. Total sum of marks MUST be exactly 100.
+      2. Provide ONLY the questions without answers.
+      3. CRITICAL: Every single question or sub-question (like 1a, 1b) MUST start on a new line with the exact prefix "### Question ". Example: "### Question 1a: [8 Marks] Explain..."
+      4. Do not include any introductory or concluding text. Just the formatted questions.
       
       PYQS:
       ${pyqsData}`;
@@ -107,14 +106,10 @@ const generateQuestion = async (socket, data) => {
       prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
       
       CONSTRAINTS:
-      1. The total sum of marks for all questions MUST be exactly ${targetMarks}.
-      2. Use 2-mark, 5-mark, and 10-mark questions.
-      3. State the marks for each question.
-      4. Immediately after each question, provide the ANSWER.
-      5. Answers MUST be derived STRICTLY from the NOTES provided below.
-      6. MANDATORY: At the end of EVERY answer, provide a reference citation. Format exactly like this: **Reference:** Page X - [View Source Document](URL). Identify the page number from the [PAGE X] tags. Use the SOURCE DOCUMENT URL provided at the start of the notes.
-      7. Provide a total marks summary at the end.
-      8. Use Markdown formatting.
+      1. Total sum of marks MUST be exactly ${targetMarks}.
+      2. Use 2-mark, 5-mark, and 10-mark questions. State marks for each.
+      3. Immediately after each question, provide the ANSWER derived STRICTLY from the NOTES.
+      4. MANDATORY: At the end of EVERY answer, provide a citation format: **Reference:** Page X - [View Source Document](URL).
       
       PYQS:
       ${pyqsData}
@@ -137,7 +132,7 @@ const generateQuestion = async (socket, data) => {
 
 const evaluateTest = async (socket, data) => {
   try {
-    const { subjectId, studentAnswers, questionPaper } = data;
+    const { subjectId, compiledAnswers } = data;
 
     if (!process.env.MISTRAL_API_KEY) throw new Error("Mistral API key missing.");
 
@@ -159,21 +154,17 @@ const evaluateTest = async (socket, data) => {
 
     const prompt = `You are a strict university examiner evaluating a student's mock test.
     
-    QUESTION PAPER:
-    ${questionPaper}
-    
-    STUDENT'S ANSWERS:
-    ${studentAnswers}
+    STUDENT SUBMISSION (Questions and their Answers):
+    ${compiledAnswers}
     
     OFFICIAL NOTES FOR VERIFICATION:
     ${notesData}
     
     CONSTRAINTS:
-    1. Evaluate the student's answers strictly based on the OFFICIAL NOTES.
-    2. Provide constructive feedback for each answered question.
-    3. Assign marks obtained out of the total marks for each question.
-    4. At the very end, provide the FINAL TOTAL SCORE out of 100.
-    5. Use Markdown formatting.`;
+    1. Evaluate strictly based on the OFFICIAL NOTES.
+    2. Provide constructive feedback and assign marks obtained out of the total marks for each question.
+    3. Provide the FINAL TOTAL SCORE out of 100 at the top of your response.
+    4. Use Markdown formatting.`;
 
     const stream = await aiModel.stream([new HumanMessage({ content: prompt })]);
 

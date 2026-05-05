@@ -8,7 +8,7 @@ const initialState = {
   subjects: [],
   isMockTestMode: false,
   timer: 10800,
-  studentAnswers: '',
+  studentAnswers: {},
   isEvaluating: false,
   evaluationResult: ''
 };
@@ -24,7 +24,7 @@ const chatSlice = createSlice({
       state.error = null;
       state.isMockTestMode = action.payload || false;
       state.timer = 10800;
-      state.studentAnswers = '';
+      state.studentAnswers = {};
       state.evaluationResult = '';
     },
     updateStatus: (state, action) => {
@@ -50,7 +50,7 @@ const chatSlice = createSlice({
       state.statusMessage = '';
       state.error = null;
       state.isMockTestMode = false;
-      state.studentAnswers = '';
+      state.studentAnswers = {};
       state.evaluationResult = '';
     },
     setSubjects: (state, action) => {
@@ -59,8 +59,9 @@ const chatSlice = createSlice({
     updateTimer: (state) => {
       if (state.timer > 0) state.timer -= 1;
     },
-    setStudentAnswers: (state, action) => {
-      state.studentAnswers = action.payload;
+    setStudentAnswer: (state, action) => {
+      const { id, text } = action.payload;
+      state.studentAnswers[id] = text;
     },
     startEvaluation: (state) => {
       state.isEvaluating = true;
@@ -88,7 +89,7 @@ export const {
   resetGeneration, 
   setSubjects,
   updateTimer,
-  setStudentAnswers,
+  setStudentAnswer,
   startEvaluation,
   receiveEvaluationChunk,
   evaluationComplete

@@ -10,7 +10,7 @@ import {
   generationError,
   setSubjects,
   updateTimer,
-  setStudentAnswers,
+  setStudentAnswer,
   startEvaluation,
   receiveEvaluationChunk,
   evaluationComplete
@@ -78,17 +78,17 @@ export const useChat = () => {
     socketRef.current.emit('generate_question', { subjectId, totalMarks: 100, isMockTest: true });
   };
 
-  const handleAnswerChange = (val) => {
-    dispatch(setStudentAnswers(val));
+  const handleAnswerChange = (id, text) => {
+    dispatch(setStudentAnswer({ id, text }));
   };
 
-  const submitTest = (subjectId) => {
+  const submitTest = (subjectId, parsedQuestions) => {
+    const compiledAnswers = parsedQuestions.map(q => 
+      `Question: ${q.text}\nStudent Answer: ${studentAnswers[q.id] || "No answer provided."}`
+    ).join("\n\n---\n\n");
+
     dispatch(startEvaluation());
-    socketRef.current.emit('evaluate_test', { 
-      subjectId, 
-      studentAnswers, 
-      questionPaper: generatedQuestion 
-    });
+    socketRef.current.emit('evaluate_test', { subjectId, compiledAnswers });
   };
 
   const formatTime = () => {
