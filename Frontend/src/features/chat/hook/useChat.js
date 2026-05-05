@@ -14,82 +14,41 @@ import {
 export const useChat = () => {
   const dispatch = useDispatch();
   const socketRef = useRef(null);
-  const timeoutRef = useRef(null);
+  
   
   const { generatedQuestion, isGenerating, statusMessage, error, subjects } = useSelector((state) => state.chat);
-
-  const resetTimeout = () => {
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => {
-      dispatch(generationError('Request timed out. The server took too long to respond.'));
-    }, 60000); 
-  };
 
   useEffect(() => {
     socketRef.current = io();
 
-    socketRef.current.on('connect_error', (err) => {
-      dispatch(generationError(`Connection Error: ${err.message}`));
-      clearTimeout(timeoutRef.current);
-    });
-
-    socketRef.current.on('disconnect', (reason) => {
-      if (reason === 'io server disconnect' || reason === 'transport close') {
-        dispatch(generationError('Disconnected from the server. Please try again.'));
-        clearTimeout(timeoutRef.current);
-      }
-    });
-
-    socketRef.current.on('question_status', (statusMsg) => {
-      resetTimeout(); 
-      dispatch(updateStatus(statusMsg));
-    });
-
-    socketRef.current.on('question_chunk', (chunk) => {
-      resetTimeout();
-      dispatch(receiveChunk(chunk));
-    });
-
-    socketRef.current.on('question_complete', () => {
-      clearTimeout(timeoutRef.current);
-      dispatch(generationComplete());
-    });
-
-    socketRef.current.on('question_error', (errMsg) => {
-      clearTimeout(timeoutRef.current);
-      dispatch(generationError(errMsg));
-    });
+    socketRef.current.on('question_status', (msg) => dispatch(updateStatus(msg)));
+    socketRef.current.on('question_chunk', (chunk) => dispatch(receiveChunk(chunk)));
+    socketRef.current.on('question_complete', () => dispatch(generationComplete()));
+    socketRef.current.on('question_error', (err) => dispatch(generationError(err)));
 
     return () => {
       if (socketRef.current) socketRef.current.disconnect();
-      clearTimeout(timeoutRef.current);
     };
   }, [dispatch]);
 
   const loadSubjects = async (schemeNo, department, semester) => {
     try {
-      if (!schemeNo || !department || !semester) return;
       const data = await chatService.fetchFilteredSubjects(schemeNo, department, semester);
       dispatch(setSubjects(data));
     } catch (err) {
-      dispatch(generationError('Failed to load subjects from the database.'));
-      console.error('Error fetching subjects:', err);
+      dispatch(generationError('Failed to load subjects.'));
+      console.error(err);
     }
   };
 
-  const generatePyqQuestion = (subjectId) => {
+  const generatePyqQuestion = (subjectId, totalMarks) => {
+    if (totalMarks < 45 || totalMarks > 90) {
+      dispatch(generationError('Marks must be between 45 and 90.'));
+      return;
+    }
     dispatch(startGeneration());
-    resetTimeout(); 
-    socketRef.current.emit('generate_question', { subjectId });
+    socketRef.current.emit('generate_question', { subjectId, totalMarks: parseInt(totalMarks) });
   };
 
-  return { 
-    generatedQuestion, 
-    isGenerating, 
-    statusMessage,
-    error, 
-    subjects,
-    loadSubjects,
-    generatePyqQuestion 
-  };
+  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion };
 };

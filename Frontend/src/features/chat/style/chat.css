@@ -109,3 +109,33 @@
   margin-bottom: 20px;
   border: 1px solid #fecaca;
 }
+
+.chat-form-row {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.chat-form-row .chat-form-group {
+  flex: 1;
+}
+
+.chat-status-msg {
+  color: #3b82f6; 
+  margin-bottom: 15px; 
+  font-style: italic;
+  font-size: 14px;
+}
+
+/* Ensure responsiveness for the row */
+@media (max-width: 768px) {
+  .chat-dashboard-wrapper {
+    flex-direction: column;
+    padding: 20px;
+  }
+  
+  .chat-form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+}

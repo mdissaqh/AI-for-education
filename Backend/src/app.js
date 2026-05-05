@@ -7,8 +7,6 @@ const materialRoutes = require('./routes/materialRoutes');
 const subjectRoutes = require('./routes/subjectRoutes');
 require('./config/passport');
 
-connectDB();
-
 const app = express();
 
 app.use(express.json());
