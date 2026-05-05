@@ -2,7 +2,7 @@ const { ChatMistralAI } = require("@langchain/mistralai");
 const { HumanMessage } = require("@langchain/core/messages");
 const Material = require('../models/Material');
 const axios = require('axios');
-const { PdfReader } = require('pdfreader');
+const PDFParser = require("pdf2json");
 require('dotenv').config();
 
 const handleGenerationError = (socket, error) => {
@@ -16,45 +16,51 @@ const extractTextFromPDF = async (pdfUrl, socket, index, type) => {
     
     const response = await axios.get(pdfUrl, {
       responseType: 'arraybuffer',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
     const buffer = Buffer.from(response.data);
     
-    const header = buffer.toString('utf8', 0, 5);
-    if (header !== '%PDF-') {
-      const errorText = buffer.toString('utf8', 0, 200);
-      throw new Error(`File is not a PDF. Server returned: ${errorText}`);
-    }
+    // 1. Store original console methods
+    const originalLog = console.log;
+    const originalWarn = console.warn;
 
     const extractedText = await new Promise((resolve, reject) => {
-        let text = "";
-        new PdfReader().parseBuffer(buffer, (err, item) => {
-            if (err) reject(err);
-            else if (!item) resolve(text);
-            else if (item.text) text += item.text + "\n";
-        });
+      const pdfParser = new PDFParser(null, 1);
+      
+      // 2. Silence console right before parsing starts
+      console.log = () => {};
+      console.warn = () => {};
+
+      pdfParser.on("pdfParser_dataError", errData => {
+        // 3. Always restore console methods first
+        console.log = originalLog;
+        console.warn = originalWarn;
+        reject(errData.parserError);
+      });
+
+      pdfParser.on("pdfParser_dataReady", () => {
+        // 3. Always restore console methods first
+        console.log = originalLog;
+        console.warn = originalWarn;
+        resolve(pdfParser.getRawTextContent());
+      });
+      
+      pdfParser.parseBuffer(buffer);
     });
-    
-    const cleanedText = extractedText.replace(/\x00/g, '').replace(/\n+/g, '\n').trim();
+
+    const cleanedText = extractedText.replace(/\r\n/g, ' ').replace(/\s+/g, ' ').trim();
     
     if (cleanedText.length < 50) {
-      throw new Error("File has no readable OCR text (less than 50 characters).");
+      throw new Error("File has no readable text.");
     }
 
     socket.emit('question_status', `Successfully extracted ${cleanedText.length} characters from ${type} ${index + 1}.`);
     
     return cleanedText.substring(0, 15000); 
   } catch (error) {
-    console.log("\n=============================================");
-    console.log(`CRITICAL ERROR EXTRACTING: ${type} ${index + 1}`);
-    console.log(`URL ATTEMPTED: ${pdfUrl}`);
-    console.log(`ERROR MESSAGE: ${error.message}`);
-    console.log("=============================================\n");
-
-    socket.emit('question_status', `Extraction Failed for ${type} ${index + 1}: ${error.message}`);
+    // If an error happens outside the Promise, ensure console is restored
+    socket.emit('question_status', `Warning: Failed to read ${type} ${index + 1}`);
     return ""; 
   }
 };
@@ -96,7 +102,7 @@ const generateQuestion = async (socket, data) => {
     }
 
     if (!pyqsText.trim() && !notesText.trim()) {
-      throw new Error("Could not extract readable text from any of the PDFs. Check your Node.js terminal for the exact error logs.");
+      throw new Error("Could not extract readable text from any of the PDFs.");
     }
 
     socket.emit('question_status', 'Analyzing document context and generating question...');
