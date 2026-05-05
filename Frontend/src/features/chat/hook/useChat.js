@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import chatService from '../service/chatService';
 import { 
   startGeneration, updateStatus, receiveChunk, generationComplete, 
-  generationError, setSubjects, updateTimer, setStudentAnswers, 
+  generationError, setSubjects, updateTimer, setStudentAnswer, 
   startEvaluation, receiveEvaluationChunk, evaluationComplete, 
   addUserMessage, receiveChatChunk, chatComplete 
 } from '../state/chatSlice';
@@ -72,13 +72,16 @@ export const useChat = () => {
     socketRef.current.emit('generate_question', { subjectId, totalMarks: 100, isMockTest: true });
   };
 
-  const handleAnswerChange = (text) => {
-    dispatch(setStudentAnswers(text));
+  const handleAnswerChange = (id, text) => {
+    dispatch(setStudentAnswer({ id, text }));
   };
 
-  const submitTest = (subjectId) => {
+  const submitTest = (subjectId, parsedQuestions) => {
+    const compiledAnswers = parsedQuestions.map(q => 
+      `Question: ${q.text}\nStudent Answer: ${studentAnswers[q.id] || "No answer provided."}`
+    ).join("\n\n---\n\n");
     dispatch(startEvaluation());
-    socketRef.current.emit('evaluate_test', { subjectId, compiledAnswers: studentAnswers });
+    socketRef.current.emit('evaluate_test', { subjectId, compiledAnswers });
   };
 
   const sendChatMessage = (subjectId, message) => {

@@ -9,6 +9,7 @@ const Dashboard = () => {
   const { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage } = useChat();
   
   const [formData, setFormData] = useState({ schemeNo: '', department: '', semester: '', subjectId: '', totalMarks: 45 });
+  const [parsedQuestions, setParsedQuestions] = useState([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef(null);
@@ -20,6 +21,14 @@ const Dashboard = () => {
   }, [formData.schemeNo, formData.department, formData.semester]);
 
   useEffect(() => {
+    if (isMockTestMode && !isGenerating && generatedQuestion && !evaluationResult) {
+      const parts = generatedQuestion.split(/(?=### Question)/);
+      const formatted = parts.map((part, idx) => ({ id: idx, text: part.trim() })).filter(p => p.text);
+      setParsedQuestions(formatted);
+    }
+  }, [isMockTestMode, isGenerating, generatedQuestion, evaluationResult]);
+
+  useEffect(() => {
     if (chatEndRef.current) {
       chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -28,10 +37,10 @@ const Dashboard = () => {
   const handleInputChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
   const handleSubmit = (e) => { e.preventDefault(); generatePyqQuestion(formData.subjectId, formData.totalMarks); };
   
-  const onAutoExpand = (e) => {
+  const onAutoExpand = (e, id) => {
     e.target.style.height = 'auto';
     e.target.style.height = e.target.scrollHeight + 'px';
-    handleAnswerChange(e.target.value);
+    handleAnswerChange(id, e.target.value);
   };
 
   const handleChatSubmit = (e) => {
@@ -87,10 +96,10 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {isMockTestMode && !isGenerating && !evaluationResult && generatedQuestion && (
+        {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 && (
           <div className="test-controls-top">
             <div className="timer-display">Time Remaining: <span>{formatTime()}</span></div>
-            <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId)} disabled={isEvaluating}>
+            <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId, parsedQuestions)} disabled={isEvaluating}>
               {isEvaluating ? 'Evaluating...' : 'Submit Test for Evaluation'}
             </button>
           </div>
@@ -98,29 +107,24 @@ const Dashboard = () => {
 
         {statusMessage && <div className="chat-status-msg">🔄 {statusMessage}</div>}
 
-        <div className="chat-stream-box">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
-            {generatedQuestion || "### Select a subject and generate a paper."}
-          </ReactMarkdown>
-        </div>
-
-        {isMockTestMode && !isGenerating && !evaluationResult && generatedQuestion && (
-          <div className="answer-sheet-container">
-            <h3 className="answer-sheet-title">Your Answer Sheet</h3>
-            <textarea 
-              className="auto-expand-textarea" 
-              value={studentAnswers} 
-              onChange={onAutoExpand} 
-              placeholder="1. Type all your answers here corresponding to the questions above..."
-            />
+        {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 ? (
+          <div className="mock-test-container">
+            {parsedQuestions.map((q) => (
+              <div key={q.id} className="mock-question-block">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{q.text}</ReactMarkdown>
+                <textarea 
+                  className="auto-expand-textarea" 
+                  value={studentAnswers[q.id] || ''} 
+                  onChange={(e) => onAutoExpand(e, q.id)} 
+                  placeholder="Type your answer here..."
+                />
+              </div>
+            ))}
           </div>
-        )}
-
-        {evaluationResult && (
-          <div className="evaluation-box">
-            <h3 className="evaluation-title">Evaluation Results</h3>
+        ) : (
+          <div className="chat-stream-box">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {evaluationResult}
+              {evaluationResult || generatedQuestion || "### Select a subject and generate a paper."}
             </ReactMarkdown>
           </div>
         )}

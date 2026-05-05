@@ -97,7 +97,7 @@ const generateQuestion = async (socket, data) => {
       1. Total sum of marks MUST be exactly 100.
       2. Provide ONLY the questions without answers.
       3. CRITICAL: Every single question or sub-question (like 1a, 1b) MUST start on a new line with the exact prefix "### Question ". Example: "### Question 1a: [8 Marks] Explain..."
-      4. Do not include any introductory or concluding text. Just the formatted questions.
+      4. Do not include any introductory or concluding text. Just output the formatted questions so the system can parse them.
       
       PYQS:
       ${pyqsData}`;
