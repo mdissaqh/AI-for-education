@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { MessageCircle, X, Send, Loader2 } from 'lucide-react';
 import { useChat } from '../hook/useChat';
 import '../style/chat.css';
 
@@ -105,9 +105,14 @@ const Dashboard = () => {
           </div>
         )}
 
-        {statusMessage && <div className="chat-status-msg">🔄 {statusMessage}</div>}
+        {statusMessage && (
+          <div className="chat-status-msg-giant">
+            <Loader2 className="spinner-icon" size={48} />
+            <p>{statusMessage}</p>
+          </div>
+        )}
 
-        {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 ? (
+        {!statusMessage && isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 && (
           <div className="mock-test-container">
             {parsedQuestions.map((q) => (
               <div key={q.id} className="mock-question-block">
@@ -121,13 +126,16 @@ const Dashboard = () => {
               </div>
             ))}
           </div>
-        ) : (
+        )}
+
+        {!statusMessage && (!isMockTestMode || evaluationResult) && (
           <div className="chat-stream-box">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {evaluationResult || generatedQuestion || "### Select a subject and generate a paper."}
             </ReactMarkdown>
           </div>
         )}
+
       </div>
 
       <button className="floating-chat-btn" onClick={() => setIsChatOpen(!isChatOpen)}>

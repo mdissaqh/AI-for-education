@@ -61,7 +61,7 @@ const generateQuestion = async (socket, data) => {
     }
     if (!process.env.GOOGLE_API_KEY) throw new Error("Google API key missing.");
 
-    socket.emit('question_status', 'Analyzing study materials...');
+    socket.emit('question_status', '📚 Scanning the sacred texts (your PDFs)... Please hold!');
 
     const aiModel = new ChatGoogleGenerativeAI({
       model: "gemini-3.1-flash-lite-preview",
@@ -90,7 +90,7 @@ const generateQuestion = async (socket, data) => {
     let prompt = "";
     
     if (isMockTest) {
-      socket.emit('question_status', `Generating 100 marks Mock Test based on PYQs...`);
+      socket.emit('question_status', `🔥 Forging the ultimate 100-mark Mock Test from PYQs... Get ready to sweat!`);
       prompt = `You are a university professor. Generate a mock test question paper based ONLY on the PYQs context provided.
       
       CONSTRAINTS:
@@ -102,7 +102,7 @@ const generateQuestion = async (socket, data) => {
       PYQS:
       ${pyqsData}`;
     } else {
-      socket.emit('question_status', `Generating a ${targetMarks} marks paper with answers and citations...`);
+      socket.emit('question_status', `🎯 Crafting a precision-guided ${targetMarks}-mark paper... Sneaking in the answers too!`);
       prompt = `You are a university professor. Generate a question paper and detailed answers based ONLY on the context provided.
       
       CONSTRAINTS:
@@ -136,7 +136,7 @@ const evaluateTest = async (socket, data) => {
 
     if (!process.env.GOOGLE_API_KEY) throw new Error("Google API key missing.");
 
-    socket.emit('evaluation_status', 'Evaluating your answers against the official notes...');
+    socket.emit('evaluation_status', '🕵️‍♂️ Putting on the strict examiner glasses... Let\'s see if you passed!');
 
     const aiModel = new ChatGoogleGenerativeAI({
       model: "gemini-3.1-flash-lite-preview",
