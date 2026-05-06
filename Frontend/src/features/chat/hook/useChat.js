@@ -6,14 +6,14 @@ import {
   startGeneration, updateStatus, receiveChunk, generationComplete, 
   generationError, setSubjects, updateTimer, setStudentAnswer, 
   startEvaluation, receiveEvaluationChunk, evaluationComplete, 
-  addUserMessage, receiveChatChunk, chatComplete 
+  addUserMessage, receiveChatChunk, chatComplete, setUploadedSolution
 } from '../state/chatSlice';
 
 export const useChat = () => {
   const dispatch = useDispatch();
   const socketRef = useRef(null);
   
-  const { generatedQuestion, isGenerating, statusMessage, error, subjects, isMockTestMode, timer, studentAnswers, isEvaluating, evaluationResult, chatMessages, isChatLoading } = useSelector((state) => state.chat);
+  const { generatedQuestion, isGenerating, statusMessage, error, subjects, isMockTestMode, timer, studentAnswers, isEvaluating, evaluationResult, chatMessages, isChatLoading, uploadedSolution } = useSelector((state) => state.chat);
 
   useEffect(() => {
     socketRef.current = io();
@@ -90,6 +90,10 @@ export const useChat = () => {
     socketRef.current.emit('general_chat', { subjectId, message });
   };
 
+  const handleFileUpload = (file) => {
+    dispatch(setUploadedSolution(file ? file.name : null));
+  };
+
   const formatTime = () => {
     const h = Math.floor(timer / 3600);
     const m = Math.floor((timer % 3600) / 60);
@@ -97,5 +101,5 @@ export const useChat = () => {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage };
+  return { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage, uploadedSolution, handleFileUpload };
 };

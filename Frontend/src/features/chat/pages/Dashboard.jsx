@@ -6,7 +6,7 @@ import { useChat } from '../hook/useChat';
 import '../style/chat.css';
 
 const Dashboard = () => {
-  const { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage } = useChat();
+  const { generatedQuestion, isGenerating, statusMessage, error, subjects, loadSubjects, generatePyqQuestion, isMockTestMode, formatTime, triggerMockTest, studentAnswers, handleAnswerChange, submitTest, isEvaluating, evaluationResult, chatMessages, isChatLoading, sendChatMessage, uploadedSolution, handleFileUpload } = useChat();
   
   const [formData, setFormData] = useState({ schemeNo: '', department: '', semester: '', subjectId: '', totalMarks: 45 });
   const [parsedQuestions, setParsedQuestions] = useState([]);
@@ -99,9 +99,20 @@ const Dashboard = () => {
         {isMockTestMode && !isGenerating && !evaluationResult && parsedQuestions.length > 0 && (
           <div className="test-controls-top">
             <div className="timer-display">Time Remaining: <span>{formatTime()}</span></div>
-            <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId, parsedQuestions)} disabled={isEvaluating}>
-              {isEvaluating ? 'Evaluating...' : 'Submit Test for Evaluation'}
-            </button>
+            <div className="test-actions-right">
+              <input 
+                type="file" 
+                id="solution-upload" 
+                style={{display: 'none'}} 
+                onChange={(e) => handleFileUpload(e.target.files[0])}
+              />
+              <label htmlFor="solution-upload" className="upload-solution-btn">
+                {uploadedSolution ? `📁 ${uploadedSolution}` : '📎 Upload Solution'}
+              </label>
+              <button className="submit-test-btn-top" onClick={() => submitTest(formData.subjectId, parsedQuestions)} disabled={isEvaluating}>
+                {isEvaluating ? 'Evaluating...' : 'Submit Test'}
+              </button>
+            </div>
           </div>
         )}
 

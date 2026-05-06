@@ -12,7 +12,8 @@ const initialState = {
   isEvaluating: false,
   evaluationResult: '',
   chatMessages: [],
-  isChatLoading: false
+  isChatLoading: false,
+  uploadedSolution: null
 };
 
 const chatSlice = createSlice({
@@ -28,6 +29,7 @@ const chatSlice = createSlice({
       state.timer = 10800;
       state.studentAnswers = {};
       state.evaluationResult = '';
+      state.uploadedSolution = null;
     },
     updateStatus: (state, action) => {
       state.statusMessage = action.payload;
@@ -84,6 +86,9 @@ const chatSlice = createSlice({
     },
     chatComplete: (state) => {
       state.isChatLoading = false;
+    },
+    setUploadedSolution: (state, action) => {
+      state.uploadedSolution = action.payload;
     }
   }
 });
@@ -92,7 +97,7 @@ export const {
   startGeneration, updateStatus, receiveChunk, generationComplete, 
   generationError, setSubjects, updateTimer, setStudentAnswer, 
   startEvaluation, receiveEvaluationChunk, evaluationComplete, 
-  addUserMessage, receiveChatChunk, chatComplete 
+  addUserMessage, receiveChatChunk, chatComplete, setUploadedSolution
 } = chatSlice.actions;
 
 export default chatSlice.reducer;

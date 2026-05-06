@@ -10,7 +10,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('Database Connected'))
+  .then(() => {})
   .catch(err => console.log(err));
 
 io.on('connection', (socket) => {
@@ -19,6 +19,4 @@ io.on('connection', (socket) => {
   socket.on('general_chat', (data) => generalChat(socket, data));
 });
 
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+server.listen(PORT, () => {});
